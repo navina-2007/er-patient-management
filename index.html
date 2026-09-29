@@ -1,0 +1,2168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ER Patient Management Dashboard</title>
+<style>
+/* ===== CSS CUSTOM PROPERTIES ===== */
+:root {
+  --bg: #f0f4f8;
+  --bg2: #ffffff;
+  --bg3: #e8edf3;
+  --surface: #ffffff;
+  --surface2: #f7f9fc;
+  --border: #d1dce8;
+  --text: #1a2332;
+  --text2: #4a5568;
+  --text3: #718096;
+  --primary: #0b5394;
+  --primary-hover: #083d72;
+  --primary-light: #e8f0fa;
+  --success: #1a7a4a;
+  --success-bg: #e6f7ed;
+  --error: #c0392b;
+  --error-bg: #fde8e6;
+  --warn: #b7700a;
+  --warn-bg: #fef5e4;
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-lg: 0 4px 20px rgba(0,0,0,0.12);
+  --radius: 10px;
+  --radius-sm: 6px;
+  --font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Triage colors */
+  --l1: #c0392b; --l1-bg: #fde8e6; --l1-light: #fdf3f2;
+  --l2: #e67e22; --l2-bg: #fef3e2; --l2-light: #fef9f3;
+  --l3: #d4ac0d; --l3-bg: #fefce2; --l3-light: #fefef3;
+  --l4: #27ae60; --l4-bg: #e6f7ed; --l4-light: #f3fef7;
+  --l5: #2980b9; --l5-bg: #e8f4fd; --l5-light: #f3f9fe;
+}
+
+[data-theme="dark"] {
+  --bg: #0f1923;
+  --bg2: #1a2535;
+  --bg3: #1e2d40;
+  --surface: #1a2535;
+  --surface2: #1e2d40;
+  --border: #2d3f55;
+  --text: #e8f0fa;
+  --text2: #a8bcd4;
+  --text3: #6b8aaa;
+  --primary: #4a9eff;
+  --primary-hover: #6db3ff;
+  --primary-light: #1a2d45;
+  --success: #4caf7a;
+  --success-bg: #0f2d1e;
+  --error: #e57373;
+  --error-bg: #2d1210;
+  --warn: #ffb74d;
+  --warn-bg: #2d1e0a;
+  --shadow: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-lg: 0 4px 20px rgba(0,0,0,0.4);
+  --l1-light: #2d1210; --l2-light: #2d1e0a; --l3-light: #2d280a;
+  --l4-light: #0f2d1e; --l5-light: #0a1e2d;
+}
+
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  transition: background 0.25s, color 0.25s;
+}
+button { font-family: inherit; cursor: pointer; border: none; }
+input, select, textarea { font-family: inherit; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg3); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ===== TOP BAR ===== */
+#topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--primary);
+  color: #fff;
+  padding: 0 1.25rem;
+  display: flex; align-items: center; gap: 0.75rem;
+  box-shadow: var(--shadow-lg);
+  min-height: 54px; flex-wrap: wrap;
+}
+#topbar h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; }
+#topbar h1 span { font-size: 0.75rem; font-weight: 400; opacity: 0.8; display: block; }
+.topbar-spacer { flex: 1; }
+
+/* Clock area */
+#clock-area {
+  display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
+}
+#clock-display {
+  font-size: 0.95rem; font-weight: 600;
+  background: rgba(255,255,255,0.15);
+  padding: 0.3rem 0.75rem; border-radius: 20px;
+  white-space: nowrap;
+}
+/* Pause/Resume button */
+#btn-clock-toggle {
+  background: rgba(255,255,255,0.2); color: #fff;
+  border: 1px solid rgba(255,255,255,0.4);
+  padding: 0.25rem 0.65rem; border-radius: 5px; font-size: 0.78rem; font-weight: 600;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+#btn-clock-toggle:hover { background: rgba(255,255,255,0.35); }
+#btn-clock-toggle.paused { background: rgba(255,180,0,0.35); border-color: rgba(255,200,50,0.6); }
+/* Speed selector */
+#clock-speed {
+  background: rgba(255,255,255,0.1); color: #fff;
+  border: 1px solid rgba(255,255,255,0.35); border-radius: 5px;
+  padding: 0.2rem 0.35rem; font-size: 0.75rem;
+  cursor: pointer;
+}
+#clock-speed option { background: #0b5394; color: #fff; }
+
+.advance-group { display: flex; gap: 0.25rem; align-items: center; }
+.advance-group label { font-size: 0.75rem; opacity: 0.8; }
+.btn-advance {
+  background: rgba(255,255,255,0.15); color: #fff;
+  border: 1px solid rgba(255,255,255,0.3);
+  padding: 0.25rem 0.6rem; border-radius: 5px; font-size: 0.75rem;
+  transition: background 0.15s;
+}
+.btn-advance:hover { background: rgba(255,255,255,0.3); }
+#custom-advance { width: 52px; padding: 0.25rem 0.4rem; border-radius: 5px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); color: #fff; font-size: 0.75rem; text-align: center; }
+#custom-advance::placeholder { color: rgba(255,255,255,0.5); }
+#btn-custom-advance { background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.4); padding: 0.25rem 0.5rem; border-radius: 5px; font-size: 0.75rem; }
+#btn-theme { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); padding: 0.3rem 0.7rem; border-radius: 5px; font-size: 0.8rem; }
+#btn-reset { background: #c0392b; color: #fff; border: none; padding: 0.3rem 0.7rem; border-radius: 5px; font-size: 0.8rem; font-weight: 600; }
+#btn-reset:hover { background: #a93226; }
+#btn-help { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 50%; width: 30px; height: 30px; font-size: 0.9rem; }
+
+/* ===== SERVER ERROR BANNER ===== */
+#server-banner {
+  display: none;
+  background: var(--error-bg);
+  color: var(--error);
+  border-bottom: 2px solid var(--error);
+  padding: 0.6rem 1.25rem;
+  font-size: 0.85rem; font-weight: 600;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+#server-banner.hidden { display: none !important; }
+#btn-retry { background: var(--error); color: #fff; border: none; padding: 0.3rem 0.75rem; border-radius: 5px; font-size: 0.8rem; margin-left: auto; }
+
+/* ===== LOADING OVERLAY ===== */
+#loading-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.3);
+  align-items: center; justify-content: center;
+}
+#loading-overlay.show { display: flex; }
+.spinner {
+  width: 40px; height: 40px;
+  border: 4px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== MAIN LAYOUT ===== */
+#main { max-width: 1600px; margin: 0 auto; padding: 1rem 1rem 2rem; }
+
+/* ===== CARD ===== */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+/* ===== ADMIT FORM ===== */
+#admit-section { display: grid; grid-template-columns: 1fr 1fr auto auto; gap: 0.75rem; align-items: end; }
+@media (max-width: 900px) { #admit-section { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { #admit-section { grid-template-columns: 1fr; } }
+.form-group { display: flex; flex-direction: column; gap: 0.3rem; }
+.form-group label { font-size: 0.78rem; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; }
+.form-group input { padding: 0.5rem 0.75rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); color: var(--text); font-size: 0.9rem; transition: border-color 0.15s; }
+.form-group input:focus { border-color: var(--primary); }
+.form-group input.error { border-color: var(--error); }
+.form-group .err-msg { font-size: 0.72rem; color: var(--error); min-height: 1em; }
+.id-row { display: flex; gap: 0.4rem; align-items: center; }
+.id-row input { flex: 1; }
+#btn-gen-id { padding: 0.5rem 0.6rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); color: var(--text2); font-size: 0.75rem; white-space: nowrap; }
+#btn-gen-id:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+
+/* Severity buttons */
+.severity-grid { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.sev-btn {
+  flex: 1; min-width: 70px;
+  padding: 0.45rem 0.5rem;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+  text-align: center; line-height: 1.3;
+}
+.sev-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+.sev-btn.active { box-shadow: 0 0 0 2px #fff, 0 0 0 4px currentColor; }
+.sev-1 { background: var(--l1-bg); color: var(--l1); border-color: var(--l1); }
+.sev-2 { background: var(--l2-bg); color: var(--l2); border-color: var(--l2); }
+.sev-3 { background: var(--l3-bg); color: #b7900a; border-color: #d4ac0d; }
+.sev-4 { background: var(--l4-bg); color: var(--l4); border-color: var(--l4); }
+.sev-5 { background: var(--l5-bg); color: var(--l5); border-color: var(--l5); }
+
+#btn-admit {
+  background: var(--primary); color: #fff;
+  padding: 0.6rem 1.5rem; border-radius: var(--radius-sm);
+  font-size: 0.95rem; font-weight: 700;
+  transition: background 0.15s, transform 0.1s;
+  align-self: end; height: fit-content;
+}
+#btn-admit:hover { background: var(--primary-hover); }
+#btn-admit:active { transform: scale(0.97); }
+#btn-admit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ===== NOW/NEXT BANNER ===== */
+#next-banner {
+  background: linear-gradient(135deg, var(--primary-light), var(--surface));
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 0.75rem 1.25rem;
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+#next-info { flex: 1; }
+#next-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); }
+#next-patient { font-size: 1rem; font-weight: 700; color: var(--text); margin-top: 0.15rem; }
+#next-patient .lvl-badge { font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 10px; margin-left: 0.4rem; }
+.banner-actions { display: flex; gap: 0.5rem; }
+#btn-treat {
+  background: var(--success); color: #fff;
+  padding: 0.5rem 1.25rem; border-radius: var(--radius-sm);
+  font-size: 0.9rem; font-weight: 700;
+  transition: background 0.15s;
+}
+#btn-treat:hover { background: #155d38; }
+#btn-treat:disabled { opacity: 0.4; cursor: not-allowed; }
+#btn-undo {
+  background: var(--surface2); color: var(--text2);
+  border: 1.5px solid var(--border);
+  padding: 0.5rem 1rem; border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  transition: all 0.15s;
+}
+#btn-undo:hover { border-color: var(--primary); color: var(--primary); }
+#btn-undo:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ===== CURRENTLY BEING TREATED PANEL ===== */
+#in-treatment-panel {
+  background: linear-gradient(135deg, #fff8e1, var(--surface));
+  border: 1.5px solid var(--warn);
+  border-radius: var(--radius);
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+}
+#in-treatment-panel.hidden { display: none; }
+#in-treatment-header {
+  display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem; flex-wrap: wrap;
+}
+#in-treatment-title {
+  font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--warn); flex: 1;
+}
+#in-treatment-count {
+  background: var(--warn-bg); color: var(--warn);
+  border: 1px solid var(--warn);
+  padding: 0.1rem 0.55rem; border-radius: 10px; font-size: 0.72rem; font-weight: 700;
+}
+#in-treatment-cards {
+  display: flex; flex-wrap: wrap; gap: 0.6rem;
+}
+.in-treat-card {
+  background: var(--surface);
+  border: 1.5px solid var(--warn);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.75rem;
+  min-width: 220px; max-width: 320px;
+  flex: 1;
+  display: flex; flex-direction: column; gap: 0.25rem;
+  box-shadow: var(--shadow);
+  animation: cardIn 0.35s ease;
+}
+.in-treat-card .itc-id { font-size: 0.7rem; color: var(--text3); font-weight: 600; }
+.in-treat-card .itc-name { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+.in-treat-card .itc-meta { font-size: 0.75rem; color: var(--text2); }
+.in-treat-card .itc-status {
+  font-size: 0.72rem; color: var(--warn); font-weight: 600;
+  display: flex; align-items: center; gap: 0.3rem; margin-top: 0.1rem;
+}
+.btn-discharge-complete {
+  margin-top: 0.4rem;
+  background: var(--success); color: #fff;
+  padding: 0.3rem 0.75rem; border-radius: var(--radius-sm);
+  font-size: 0.78rem; font-weight: 700;
+  border: none; cursor: pointer;
+  transition: background 0.15s;
+  align-self: flex-start;
+}
+.btn-discharge-complete:hover { background: #155d38; }
+
+[data-theme="dark"] #in-treatment-panel {
+  background: linear-gradient(135deg, #2d1e0a, var(--surface));
+}
+
+/* ===== VIEW TOGGLE ===== */
+#view-toggle { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; align-items: center; }
+.view-btn {
+  padding: 0.35rem 0.9rem; border-radius: 20px; font-size: 0.82rem; font-weight: 600;
+  border: 1.5px solid var(--border); background: var(--surface);
+  color: var(--text2); transition: all 0.15s;
+}
+.view-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+/* ===== QUEUE COLUMNS ===== */
+#queues-view { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem; }
+@media (max-width: 1100px) { #queues-view { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 700px) { #queues-view { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 450px) { #queues-view { grid-template-columns: 1fr; } }
+
+.queue-col {
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  display: flex; flex-direction: column;
+}
+.queue-header {
+  padding: 0.6rem 0.9rem;
+  font-size: 0.8rem; font-weight: 700;
+  display: flex; justify-content: space-between; align-items: center;
+  letter-spacing: 0.02em;
+}
+.queue-header .count-badge {
+  background: rgba(255,255,255,0.25);
+  padding: 0.1rem 0.5rem; border-radius: 10px; font-size: 0.72rem;
+}
+.queue-h1 { background: var(--l1); color: #fff; }
+.queue-h2 { background: var(--l2); color: #fff; }
+.queue-h3 { background: #b7900a; color: #fff; }
+.queue-h4 { background: var(--l4); color: #fff; }
+.queue-h5 { background: var(--l5); color: #fff; }
+
+.queue-body { padding: 0.5rem; flex: 1; overflow-y: auto; max-height: 520px; }
+.empty-msg { text-align: center; color: var(--text3); font-size: 0.82rem; padding: 1.5rem 0.5rem; }
+.empty-icon { font-size: 1.5rem; margin-bottom: 0.25rem; }
+
+/* Patient card */
+.patient-card {
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.7rem;
+  margin-bottom: 0.4rem;
+  position: relative;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.patient-card:hover { box-shadow: var(--shadow); }
+.patient-card.admit-anim { animation: cardIn 0.4s ease; }
+@keyframes cardIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .patient-card.admit-anim { animation: none; } }
+.patient-card.aged-anim { animation: agePulse 0.6s ease; }
+@keyframes agePulse { 0% { background: var(--warn-bg); } 100% { background: var(--surface2); } }
+@media (prefers-reduced-motion: reduce) { .patient-card.aged-anim { animation: none; } }
+
+/* Promotion highlight — flashes amber then fades */
+.patient-card.promoted-anim { animation: promotePulse 1.2s ease; }
+@keyframes promotePulse {
+  0%   { background: #fff3cd; box-shadow: 0 0 0 3px var(--warn); }
+  60%  { background: #fff3cd; box-shadow: 0 0 0 3px var(--warn); }
+  100% { background: var(--surface2); box-shadow: none; }
+}
+
+.pc-id { font-size: 0.7rem; color: var(--text3); font-weight: 600; }
+.pc-name { font-size: 0.88rem; font-weight: 700; color: var(--text); margin: 0.1rem 0; }
+.pc-meta { font-size: 0.75rem; color: var(--text2); display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.aged-badge { font-size: 0.65rem; background: var(--warn-bg); color: var(--warn); border: 1px solid; padding: 0.08rem 0.35rem; border-radius: 10px; white-space: nowrap; }
+/* Live wait time label */
+.pc-wait { font-size: 0.72rem; color: var(--primary); font-weight: 600; margin-top: 0.15rem; }
+
+/* Aging progress bar */
+.aging-bar-wrap { margin: 0.4rem 0 0.3rem; }
+.aging-bar-label { font-size: 0.65rem; color: var(--text3); display: flex; justify-content: space-between; }
+.aging-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 0.2rem; }
+.aging-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+.aging-fill-low { background: var(--l4); }
+.aging-fill-med { background: var(--l3); }
+.aging-fill-high { background: var(--l2); }
+.aging-fill-crit { background: var(--l1); }
+
+.pc-actions { display: flex; gap: 0.3rem; margin-top: 0.35rem; flex-wrap: wrap; }
+.btn-sm {
+  font-size: 0.72rem; padding: 0.2rem 0.5rem;
+  border-radius: 4px; border: 1.5px solid var(--border);
+  background: var(--surface); color: var(--text2);
+  transition: all 0.12s;
+}
+.btn-sm:hover { border-color: var(--primary); color: var(--primary); }
+.btn-sm.danger:hover { border-color: var(--error); color: var(--error); }
+.retriage-picker { display: flex; gap: 2px; }
+.rt-btn { font-size: 0.68rem; padding: 0.15rem 0.3rem; border-radius: 3px; border: 1px solid transparent; font-weight: 700; }
+.rt-1 { background: var(--l1-bg); color: var(--l1); border-color: var(--l1); }
+.rt-2 { background: var(--l2-bg); color: var(--l2); border-color: var(--l2); }
+.rt-3 { background: var(--l3-bg); color: #b7900a; border-color: #d4ac0d; }
+.rt-4 { background: var(--l4-bg); color: var(--l4); border-color: var(--l4); }
+.rt-5 { background: var(--l5-bg); color: var(--l5); border-color: var(--l5); }
+
+/* Level badges */
+.lvl-badge { display: inline-block; font-size: 0.7rem; padding: 0.1rem 0.5rem; border-radius: 10px; font-weight: 700; }
+.lvl-1 { background: var(--l1-bg); color: var(--l1); }
+.lvl-2 { background: var(--l2-bg); color: var(--l2); }
+.lvl-3 { background: var(--l3-bg); color: #b7900a; }
+.lvl-4 { background: var(--l4-bg); color: var(--l4); }
+.lvl-5 { background: var(--l5-bg); color: var(--l5); }
+
+/* ===== WAITING LIST TABLE ===== */
+#list-view { display: none; }
+#list-view.active { display: block; }
+#queues-view.hidden { display: none; }
+.search-bar { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; align-items: center; }
+#search-input {
+  flex: 1; max-width: 300px;
+  padding: 0.45rem 0.75rem; border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--surface2); color: var(--text); font-size: 0.88rem;
+}
+.table-wrap { overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+th {
+  background: var(--primary); color: #fff;
+  padding: 0.55rem 0.75rem; text-align: left; font-weight: 600; font-size: 0.78rem;
+  white-space: nowrap; cursor: pointer; user-select: none;
+}
+th:hover { background: var(--primary-hover); }
+th .sort-icon { margin-left: 0.3rem; opacity: 0.6; }
+td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--primary-light); }
+tr:nth-child(even) td { background: var(--surface2); }
+tr:nth-child(even):hover td { background: var(--primary-light); }
+
+/* ===== TABS ===== */
+.tab-bar { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 1rem; overflow-x: auto; }
+.tab-btn {
+  padding: 0.55rem 1.1rem; border: none; background: none;
+  color: var(--text3); font-size: 0.85rem; font-weight: 600;
+  border-bottom: 3px solid transparent; margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s; white-space: nowrap;
+}
+.tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+.tab-btn:hover { color: var(--text); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ===== STATS ===== */
+#stats-section { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 700px) { #stats-section { grid-template-columns: 1fr; } }
+.stat-card { background: var(--surface2); border-radius: var(--radius-sm); padding: 0.75rem 1rem; border: 1px solid var(--border); }
+.stat-card h4 { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text3); margin-bottom: 0.5rem; }
+.stat-number { font-size: 1.6rem; font-weight: 800; color: var(--text); }
+.stat-sub { font-size: 0.75rem; color: var(--text3); margin-top: 0.1rem; }
+.bar-chart { margin-top: 0.5rem; }
+.bc-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
+.bc-label { font-size: 0.75rem; width: 80px; color: var(--text2); flex-shrink: 0; }
+.bc-bar-wrap { flex: 1; background: var(--border); border-radius: 3px; height: 18px; overflow: hidden; }
+.bc-bar { height: 100%; border-radius: 3px; display: flex; align-items: center; padding-left: 4px; font-size: 0.7rem; color: #fff; font-weight: 700; transition: width 0.5s ease; }
+.bc-count { font-size: 0.75rem; color: var(--text3); width: 24px; text-align: right; }
+
+/* ===== HISTORY / ACTIVITY LOG ===== */
+.history-list { list-style: none; }
+.history-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.55rem 0; border-bottom: 1px solid var(--border); }
+.history-item:last-child { border-bottom: none; }
+.hist-icon { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; flex-shrink: 0; }
+.hist-treated { background: var(--success-bg); color: var(--success); }
+.hist-info { flex: 1; }
+.hist-name { font-size: 0.85rem; font-weight: 600; }
+.hist-meta { font-size: 0.75rem; color: var(--text3); }
+.empty-history { text-align: center; color: var(--text3); padding: 2rem; font-size: 0.85rem; }
+
+.activity-list { list-style: none; max-height: 400px; overflow-y: auto; }
+.activity-item { font-size: 0.8rem; padding: 0.35rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem; }
+.activity-item:last-child { border-bottom: none; }
+.act-time { color: var(--text3); white-space: nowrap; font-family: monospace; flex-shrink: 0; }
+.act-ok { color: var(--success); }
+.act-err { color: var(--error); }
+/* Promotion log entries in amber */
+.act-promo { color: var(--warn); font-weight: 600; }
+
+/* ===== TOOLS SECTION ===== */
+.tools-grid { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.tool-btn {
+  background: var(--surface2); border: 1.5px solid var(--border);
+  color: var(--text); padding: 0.5rem 1rem; border-radius: var(--radius-sm);
+  font-size: 0.85rem; transition: all 0.15s;
+}
+.tool-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.tool-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+.tool-btn.primary:hover { background: var(--primary-hover); }
+
+/* Simulation form */
+#sim-form { display: flex; gap: 0.5rem; align-items: end; flex-wrap: wrap; margin-top: 0.5rem; }
+#sim-form .form-group { min-width: 100px; }
+#sim-form label { font-size: 0.75rem; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; }
+#sim-form input { padding: 0.45rem 0.6rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); color: var(--text); font-size: 0.88rem; width: 90px; }
+
+/* CSV import */
+#csv-import-area { display: none; margin-top: 0.75rem; }
+#csv-import-area.show { display: block; }
+#csv-textarea {
+  width: 100%; height: 120px; padding: 0.6rem;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface2); color: var(--text); font-family: monospace; font-size: 0.82rem; resize: vertical;
+}
+.csv-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; align-items: center; }
+#csv-file { font-size: 0.8rem; color: var(--text2); }
+#csv-result { margin-top: 0.5rem; font-size: 0.82rem; }
+
+/* ===== LEGEND / HOW IT WORKS ===== */
+#legend-section { overflow: hidden; }
+#legend-toggle { width: 100%; text-align: left; background: none; color: var(--text2); font-size: 0.85rem; font-weight: 600; padding: 0.25rem 0; display: flex; justify-content: space-between; align-items: center; }
+#legend-body { display: none; padding-top: 0.75rem; }
+#legend-body.open { display: block; }
+.legend-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.5rem; }
+.legend-item { padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); border: 1.5px solid; font-size: 0.8rem; }
+.legend-item strong { display: block; font-size: 0.85rem; }
+.legend-threshold { font-size: 0.72rem; margin-top: 0.15rem; opacity: 0.8; }
+.legend-aging { margin-top: 0.75rem; font-size: 0.82rem; color: var(--text2); }
+.legend-aging ul { margin-left: 1.2rem; margin-top: 0.35rem; }
+.legend-aging li { margin-bottom: 0.2rem; }
+
+/* ===== TOASTS ===== */
+#toast-container {
+  position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 500;
+  display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none;
+}
+.toast {
+  background: var(--surface);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  padding: 0.65rem 1rem;
+  font-size: 0.85rem;
+  max-width: 340px;
+  pointer-events: all;
+  animation: toastIn 0.25s ease;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.toast.success { border-left-color: var(--success); }
+.toast.error { border-left-color: var(--error); }
+.toast.warn { border-left-color: var(--warn); }
+@keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
+.toast-out { animation: toastOut 0.25s ease forwards; }
+@keyframes toastOut { to { opacity: 0; transform: translateX(20px); } }
+@media (prefers-reduced-motion: reduce) {
+  .toast, .toast-out { animation: none; }
+}
+
+/* ===== HELP POPOVER ===== */
+#help-overlay {
+  display: none; position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,0.5); align-items: center; justify-content: center;
+}
+#help-overlay.show { display: flex; }
+#help-box {
+  background: var(--surface); border-radius: var(--radius);
+  padding: 1.5rem; max-width: 480px; width: 90%;
+  box-shadow: var(--shadow-lg);
+}
+#help-box h3 { margin-bottom: 1rem; color: var(--text); }
+.shortcut-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+.shortcut-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--border); }
+.shortcut-table td:first-child { font-family: monospace; background: var(--bg3); border-radius: 3px; padding: 0.2rem 0.5rem; font-weight: 700; white-space: nowrap; color: var(--primary); width: 80px; }
+#help-close { margin-top: 1rem; padding: 0.5rem 1.25rem; background: var(--primary); color: #fff; border-radius: var(--radius-sm); font-size: 0.88rem; }
+.priority-explain { margin-top: 1rem; font-size: 0.8rem; color: var(--text2); border-top: 1px solid var(--border); padding-top: 0.75rem; }
+
+/* ===== CONFIRM DIALOG ===== */
+#confirm-overlay {
+  display: none; position: fixed; inset: 0; z-index: 400;
+  background: rgba(0,0,0,0.5); align-items: center; justify-content: center;
+}
+#confirm-overlay.show { display: flex; }
+#confirm-box {
+  background: var(--surface); border-radius: var(--radius);
+  padding: 1.5rem; max-width: 380px; width: 90%;
+  box-shadow: var(--shadow-lg); text-align: center;
+}
+#confirm-box p { margin: 0.75rem 0 1.25rem; color: var(--text2); font-size: 0.9rem; }
+.confirm-actions { display: flex; gap: 0.75rem; justify-content: center; }
+#confirm-ok { background: var(--error); color: #fff; padding: 0.5rem 1.5rem; border-radius: var(--radius-sm); font-weight: 700; }
+#confirm-cancel { background: var(--surface2); border: 1.5px solid var(--border); color: var(--text2); padding: 0.5rem 1.25rem; border-radius: var(--radius-sm); }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 600px) {
+  #topbar { padding: 0.5rem; }
+  #topbar h1 { font-size: 0.9rem; }
+  #clock-display { font-size: 0.8rem; }
+  .advance-group { gap: 0.15rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== TOP BAR ===== -->
+<header id="topbar" role="banner">
+  <h1>🏥 ER Dashboard <span>Patient Management System</span></h1>
+
+  <!-- Auto-clock controls -->
+  <div id="clock-area" role="group" aria-label="Simulated clock">
+    <div id="clock-display" aria-live="polite" aria-atomic="true">⏱ Clock: 0 min (running)</div>
+    <button id="btn-clock-toggle" onclick="toggleClock()" aria-label="Pause or resume auto clock">⏸ Pause</button>
+    <select id="clock-speed" onchange="setClockSpeed(this.value)" aria-label="Clock speed multiplier" title="Clock speed">
+      <option value="1">1×</option>
+      <option value="2">2×</option>
+      <option value="5">5×</option>
+      <option value="10">10×</option>
+    </select>
+  </div>
+
+  <!-- Manual advance buttons -->
+  <div class="advance-group" role="group" aria-label="Advance simulated time">
+    <label>+Time:</label>
+    <button class="btn-advance" onclick="advanceTime(10)" aria-label="Advance 10 minutes">+10m</button>
+    <button class="btn-advance" onclick="advanceTime(30)" aria-label="Advance 30 minutes">+30m</button>
+    <button class="btn-advance" onclick="advanceTime(60)" aria-label="Advance 60 minutes">+60m</button>
+    <input id="custom-advance" type="number" min="1" max="1000" placeholder="min" aria-label="Custom minutes to advance">
+    <button id="btn-custom-advance" onclick="advanceCustom()" aria-label="Advance custom time">Go</button>
+  </div>
+
+  <div class="topbar-spacer"></div>
+  <button id="btn-theme" onclick="toggleTheme()" aria-label="Toggle light/dark theme">🌙 Dark</button>
+  <button id="btn-reset" onclick="confirmReset()" aria-label="Reset system (requires confirmation)">↺ Reset</button>
+  <button id="btn-help" onclick="showHelp()" aria-label="Keyboard shortcuts and help">?</button>
+</header>
+
+<!-- ===== SERVER ERROR BANNER ===== -->
+<div id="server-banner" class="hidden" role="alert" aria-live="assertive">
+  ⚠️ Cannot reach server at <strong>localhost:3000</strong>.
+  <button id="btn-retry" onclick="retryConnection()">Retry</button>
+</div>
+
+<!-- ===== LOADING ===== -->
+<div id="loading-overlay" role="status" aria-label="Loading">
+  <div class="spinner"></div>
+</div>
+
+<!-- ===== TOAST CONTAINER ===== -->
+<div id="toast-container" aria-live="polite" aria-relevant="additions" role="log" aria-label="Notifications"></div>
+
+<!-- ===== MAIN ===== -->
+<main id="main" role="main">
+
+  <!-- Admit Form -->
+  <div class="card" role="region" aria-label="Admit new patient">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+      <h2 style="font-size:0.95rem;font-weight:700;">Admit New Patient</h2>
+    </div>
+    <div id="admit-section">
+      <div class="form-group">
+        <label for="admit-id">Patient ID</label>
+        <div class="id-row">
+          <input id="admit-id" type="number" min="1" placeholder="e.g. 1001" aria-describedby="id-err">
+          <button id="btn-gen-id" onclick="generateId()" aria-label="Auto-generate ID">⚡ Auto</button>
+        </div>
+        <span id="id-err" class="err-msg" role="alert"></span>
+      </div>
+      <div class="form-group">
+        <label for="admit-name">Full Name</label>
+        <input id="admit-name" type="text" maxlength="40" placeholder="Letters and spaces only" autocomplete="off" aria-describedby="name-err">
+        <span id="name-err" class="err-msg" role="alert"></span>
+      </div>
+      <div class="form-group">
+        <label for="admit-age">Age</label>
+        <input id="admit-age" type="number" min="0" max="120" placeholder="0-120" aria-describedby="age-err">
+        <span id="age-err" class="err-msg" role="alert"></span>
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Severity Level</label>
+        <div class="severity-grid" role="group" aria-label="Select triage severity">
+          <button class="sev-btn sev-1" data-level="1" onclick="selectSev(1)" aria-pressed="false" aria-label="Level 1 Critical - immediately life threatening">1 Critical<br><span style="font-weight:400;font-size:0.68rem;">Immediately life-threatening</span></button>
+          <button class="sev-btn sev-2" data-level="2" onclick="selectSev(2)" aria-pressed="false" aria-label="Level 2 Emergent - major threat to life">2 Emergent<br><span style="font-weight:400;font-size:0.68rem;">Major threat to life</span></button>
+          <button class="sev-btn sev-3" data-level="3" onclick="selectSev(3)" aria-pressed="false" aria-label="Level 3 Urgent - serious condition">3 Urgent<br><span style="font-weight:400;font-size:0.68rem;">Serious, needs attention</span></button>
+          <button class="sev-btn sev-4" data-level="4" onclick="selectSev(4)" aria-pressed="false" aria-label="Level 4 Semi-urgent - stable condition">4 Semi-Urgent<br><span style="font-weight:400;font-size:0.68rem;">Stable, can wait</span></button>
+          <button class="sev-btn sev-5" data-level="5" onclick="selectSev(5)" aria-pressed="false" aria-label="Level 5 Non-urgent - minor complaint">5 Non-Urgent<br><span style="font-weight:400;font-size:0.68rem;">Minor complaint</span></button>
+        </div>
+        <span id="sev-err" class="err-msg" role="alert"></span>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:0.75rem;">
+      <button id="btn-admit" onclick="admitPatient()" aria-label="Submit admission">+ Admit Patient</button>
+    </div>
+  </div>
+
+  <!-- Now/Next Banner -->
+  <div id="next-banner" role="region" aria-label="Next patient to be treated">
+    <div id="next-info">
+      <div id="next-label">NEXT TO TREAT</div>
+      <div id="next-patient">No patients waiting</div>
+    </div>
+    <div class="banner-actions">
+      <button id="btn-treat" onclick="treatNext()" disabled aria-label="Treat next patient (keyboard: T)">✓ Treat Next</button>
+      <button id="btn-undo" onclick="undoLast()" disabled aria-label="Undo last treatment (keyboard: U)">↩ Undo</button>
+    </div>
+  </div>
+
+  <!-- Currently Being Treated Panel -->
+  <div id="in-treatment-panel" class="hidden" role="region" aria-label="Patients currently being treated">
+    <div id="in-treatment-header">
+      <span id="in-treatment-title">🏥 Currently Being Treated</span>
+      <span id="in-treatment-count">0</span>
+    </div>
+    <div id="in-treatment-cards" role="list" aria-label="Patients in treatment"></div>
+  </div>
+
+  <!-- View Toggle -->
+  <div id="view-toggle" role="group" aria-label="Queue display mode">
+    <button class="view-btn active" id="btn-col-view" onclick="switchView('columns')" aria-pressed="true">⊞ Queue Columns</button>
+    <button class="view-btn" id="btn-list-view" onclick="switchView('list')" aria-pressed="false">☰ Waiting List</button>
+  </div>
+
+  <!-- Queue Columns -->
+  <div id="queues-view" role="region" aria-label="Triage queue columns">
+    <div class="queue-col" id="col-1">
+      <div class="queue-header queue-h1">
+        <span>🔴 Level 1 — Critical</span>
+        <span class="count-badge" id="cnt-1">0</span>
+      </div>
+      <div class="queue-body" id="q-1" role="list" aria-label="Level 1 Critical queue"></div>
+    </div>
+    <div class="queue-col" id="col-2">
+      <div class="queue-header queue-h2">
+        <span>🟠 Level 2 — Emergent</span>
+        <span class="count-badge" id="cnt-2">0</span>
+      </div>
+      <div class="queue-body" id="q-2" role="list" aria-label="Level 2 Emergent queue"></div>
+    </div>
+    <div class="queue-col" id="col-3">
+      <div class="queue-header queue-h3">
+        <span>🟡 Level 3 — Urgent</span>
+        <span class="count-badge" id="cnt-3">0</span>
+      </div>
+      <div class="queue-body" id="q-3" role="list" aria-label="Level 3 Urgent queue"></div>
+    </div>
+    <div class="queue-col" id="col-4">
+      <div class="queue-header queue-h4">
+        <span>🟢 Level 4 — Semi-Urgent</span>
+        <span class="count-badge" id="cnt-4">0</span>
+      </div>
+      <div class="queue-body" id="q-4" role="list" aria-label="Level 4 Semi-urgent queue"></div>
+    </div>
+    <div class="queue-col" id="col-5">
+      <div class="queue-header queue-h5">
+        <span>🔵 Level 5 — Non-Urgent</span>
+        <span class="count-badge" id="cnt-5">0</span>
+      </div>
+      <div class="queue-body" id="q-5" role="list" aria-label="Level 5 Non-urgent queue"></div>
+    </div>
+  </div>
+
+  <!-- Waiting List View -->
+  <div id="list-view" role="region" aria-label="Sortable waiting list">
+    <div class="search-bar">
+      <input id="search-input" type="search" placeholder="🔍 Search by ID or name…" aria-label="Search patients by ID or name" oninput="filterTable()">
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortTable('position')" aria-sort="none"># <span class="sort-icon"></span></th>
+            <th onclick="sortTable('id')" aria-sort="none">ID <span class="sort-icon"></span></th>
+            <th onclick="sortTable('name')" aria-sort="none">Name <span class="sort-icon"></span></th>
+            <th onclick="sortTable('age')" aria-sort="none">Age <span class="sort-icon"></span></th>
+            <th onclick="sortTable('level')" aria-sort="none">Level <span class="sort-icon"></span></th>
+            <th onclick="sortTable('orig')" aria-sort="none">Orig. Level <span class="sort-icon"></span></th>
+            <th onclick="sortTable('wait')" aria-sort="none">Wait (min) <span class="sort-icon"></span></th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="list-tbody"></tbody>
+      </table>
+    </div>
+    <div id="list-empty" style="display:none;text-align:center;padding:1.5rem;color:var(--text3);">No patients waiting.</div>
+  </div>
+
+  <!-- Tabs: Stats / History / Tools -->
+  <div class="card" style="margin-top:1rem;" role="region" aria-label="Statistics, history, and tools">
+    <div class="tab-bar" role="tablist">
+      <button class="tab-btn active" role="tab" aria-selected="true" id="tab-stats-btn" onclick="switchTab('stats')">📊 Statistics</button>
+      <button class="tab-btn" role="tab" aria-selected="false" id="tab-hist-btn" onclick="switchTab('history')">📋 Treatment History</button>
+      <button class="tab-btn" role="tab" aria-selected="false" id="tab-log-btn" onclick="switchTab('log')">📝 Activity Log</button>
+      <button class="tab-btn" role="tab" aria-selected="false" id="tab-tools-btn" onclick="switchTab('tools')">🛠 Tools</button>
+    </div>
+
+    <!-- Stats Panel -->
+    <div id="tab-stats" class="tab-panel active" role="tabpanel" aria-labelledby="tab-stats-btn">
+      <div id="stats-section">
+        <div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.75rem;">
+            <div class="stat-card">
+              <h4>Total Waiting</h4>
+              <div class="stat-number" id="stat-waiting">0</div>
+            </div>
+            <div class="stat-card">
+              <h4>Total Treated</h4>
+              <div class="stat-number" id="stat-treated">0</div>
+            </div>
+            <div class="stat-card">
+              <h4>Avg Wait (waiting)</h4>
+              <div class="stat-number" id="stat-avg-wait">0 min</div>
+            </div>
+            <div class="stat-card">
+              <h4>Avg Wait (treated)</h4>
+              <div class="stat-number" id="stat-avg-treat">0 min</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <h4>Max Wait</h4>
+            <div class="stat-number" id="stat-max-wait">0 min</div>
+            <div class="stat-sub" id="stat-max-name"></div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <h4>Patients per Level</h4>
+          <div class="bar-chart" id="bar-chart" aria-label="Bar chart of patients per triage level"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Panel -->
+    <div id="tab-history" class="tab-panel" role="tabpanel" aria-labelledby="tab-hist-btn">
+      <ul class="history-list" id="history-list" aria-label="Treatment history, most recent first"></ul>
+      <div id="hist-empty" class="empty-history">No patients have been treated yet.</div>
+    </div>
+
+    <!-- Activity Log Panel -->
+    <div id="tab-log" class="tab-panel" role="tabpanel" aria-labelledby="tab-log-btn">
+      <ul class="activity-list" id="activity-list" aria-label="Activity log"></ul>
+      <div id="log-empty" style="text-align:center;padding:2rem;color:var(--text3);font-size:0.85rem;">No activity yet.</div>
+    </div>
+
+    <!-- Tools Panel -->
+    <div id="tab-tools" class="tab-panel" role="tabpanel" aria-labelledby="tab-tools-btn">
+      <div style="margin-bottom:1rem;">
+        <h3 style="font-size:0.88rem;font-weight:700;margin-bottom:0.5rem;">Simulation</h3>
+        <div id="sim-form">
+          <div class="form-group">
+            <label for="sim-count">Patients (1–50)</label>
+            <input id="sim-count" type="number" min="1" max="50" value="10">
+          </div>
+          <div class="form-group">
+            <label for="sim-seed">Seed (optional)</label>
+            <input id="sim-seed" type="number" min="0" value="42">
+          </div>
+          <button class="tool-btn primary" onclick="runSimulation()">▶ Run Simulation</button>
+          <button class="tool-btn" onclick="loadDemoData()">📂 Load Demo</button>
+        </div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:0.75rem 0;">
+
+      <div style="margin-bottom:1rem;">
+        <h3 style="font-size:0.88rem;font-weight:700;margin-bottom:0.5rem;">Import / Export CSV</h3>
+        <p style="font-size:0.78rem;color:var(--text3);margin-bottom:0.5rem;">Format: <code>id,name,age,severity</code> — optional header row accepted</p>
+        <div class="tools-grid">
+          <button class="tool-btn" onclick="toggleCsvImport()">📥 Import CSV</button>
+          <button class="tool-btn" onclick="exportCSV()">📤 Export CSV</button>
+        </div>
+        <div id="csv-import-area">
+          <label for="csv-textarea" style="font-size:0.78rem;font-weight:600;color:var(--text2);display:block;margin:0.5rem 0 0.25rem;">Paste CSV data:</label>
+          <textarea id="csv-textarea" aria-label="Paste CSV data here" placeholder="id,name,age,severity&#10;1001,John Smith,45,3&#10;1002,Jane Doe,28,5"></textarea>
+          <div class="csv-actions">
+            <input type="file" id="csv-file" accept=".csv,.txt" aria-label="Upload CSV file" onchange="loadCSVFile(event)">
+            <button class="tool-btn primary" onclick="importCSV()" style="margin-left:auto;">Import</button>
+            <button class="tool-btn" onclick="document.getElementById('csv-import-area').classList.remove('show')">Cancel</button>
+          </div>
+          <div id="csv-result"></div>
+        </div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:0.75rem 0;">
+
+      <div>
+        <h3 style="font-size:0.88rem;font-weight:700;margin-bottom:0.5rem;">Search Patient by ID</h3>
+        <div style="display:flex;gap:0.5rem;">
+          <input id="search-id-input" type="number" min="1" placeholder="Patient ID" style="padding:0.45rem 0.6rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);width:130px;" aria-label="Search patient by ID">
+          <button class="tool-btn primary" onclick="searchPatient()">Search</button>
+        </div>
+        <div id="search-result" style="margin-top:0.5rem;font-size:0.82rem;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="card">
+    <button id="legend-toggle" onclick="toggleLegend()" aria-expanded="false" aria-controls="legend-body">
+      <span>ℹ️ How It Works — Severity Levels &amp; Aging</span>
+      <span id="legend-arrow">▼</span>
+    </button>
+    <div id="legend-body" role="region" aria-label="Legend">
+      <div class="legend-grid">
+        <div class="legend-item" style="background:var(--l1-light);border-color:var(--l1);color:var(--l1);">
+          <strong>🔴 Level 1 — Critical</strong>
+          Immediately life-threatening. Never promoted further.
+          <div class="legend-threshold">Aging: Never (ceiling)</div>
+        </div>
+        <div class="legend-item" style="background:var(--l2-light);border-color:var(--l2);color:var(--l2);">
+          <strong>🟠 Level 2 — Emergent</strong>
+          Major threat to life. Top of aging promotion ladder.
+          <div class="legend-threshold">Aging: Never promoted (ceiling)</div>
+        </div>
+        <div class="legend-item" style="background:var(--l3-light);border-color:#d4ac0d;color:#b7900a;">
+          <strong>🟡 Level 3 — Urgent</strong>
+          Serious condition requiring timely attention.
+          <div class="legend-threshold">Aging: → Level 2 after 60 min</div>
+        </div>
+        <div class="legend-item" style="background:var(--l4-light);border-color:var(--l4);color:var(--l4);">
+          <strong>🟢 Level 4 — Semi-Urgent</strong>
+          Stable but needs evaluation.
+          <div class="legend-threshold">Aging: → Level 3 after 90 min</div>
+        </div>
+        <div class="legend-item" style="background:var(--l5-light);border-color:var(--l5);color:var(--l5);">
+          <strong>🔵 Level 5 — Non-Urgent</strong>
+          Minor complaint; can wait safely.
+          <div class="legend-threshold">Aging: → Level 4 after 120 min</div>
+        </div>
+      </div>
+      <div class="legend-aging">
+        <strong>Anti-Starvation Aging</strong> — patients waiting too long are automatically promoted one level:
+        <ul>
+          <li>Level 5 → Level 4 after <strong>120 minutes</strong></li>
+          <li>Level 4 → Level 3 after <strong>90 minutes</strong> at that level</li>
+          <li>Level 3 → Level 2 after <strong>60 minutes</strong> at that level</li>
+          <li>Maximum promotion ceiling: <strong>Level 2</strong> (never Level 1)</li>
+        </ul>
+        <br>
+        <strong>Treatment Order</strong>: Always the highest-priority non-empty queue first.
+        Within the same level: strict FIFO by arrival time.
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Help Popover -->
+<div id="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" onclick="hideHelp(event)">
+  <div id="help-box">
+    <h3 id="help-title">⌨️ Keyboard Shortcuts</h3>
+    <table class="shortcut-table">
+      <tr><td>T</td><td>Treat next patient</td></tr>
+      <tr><td>U</td><td>Undo last treatment</td></tr>
+      <tr><td>A</td><td>Focus admit form (Patient ID field)</td></tr>
+      <tr><td>/</td><td>Focus search box (waiting list view)</td></tr>
+      <tr><td>Space</td><td>Pause / Resume clock</td></tr>
+      <tr><td>?</td><td>Toggle this help dialog</td></tr>
+      <tr><td>Esc</td><td>Close dialogs</td></tr>
+    </table>
+    <div class="priority-explain">
+      <strong>Priority &amp; FIFO</strong>: Patients are always treated in level order (1=highest priority).
+      Within the same level, earliest-arriving patient goes first (FIFO).
+      <br><br>
+      <strong>Aging</strong>: Long-waiting patients are automatically promoted upward to prevent starvation.
+      The promotion ceiling is Level 2.
+      <br><br>
+      <strong>Auto-clock</strong>: The simulated clock advances by 1 min every 2 real seconds at 1× speed.
+      Use the speed selector (1×/2×/5×/10×) or Pause to control it.
+    </div>
+    <button id="help-close" onclick="hideHelp()">Close</button>
+  </div>
+</div>
+
+<!-- Confirm Dialog -->
+<div id="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+  <div id="confirm-box">
+    <h3 id="confirm-title" style="font-size:1rem;">Confirm Action</h3>
+    <p id="confirm-msg">Are you sure?</p>
+    <div class="confirm-actions">
+      <button id="confirm-ok" onclick="confirmOk()">Confirm</button>
+      <button id="confirm-cancel" onclick="confirmClose()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ===== CONSTANTS ===== */
+const API = '/api';
+const LEVEL_NAMES = ['', 'Critical', 'Emergent', 'Urgent', 'Semi-Urgent', 'Non-Urgent'];
+const LEVEL_COLORS = ['', '#c0392b', '#e67e22', '#d4ac0d', '#27ae60', '#2980b9'];
+/** Aging thresholds per level (index = level-1). 0 = never promoted. */
+const AGING_THRESHOLDS = [0, 0, 60, 90, 120];
+
+/**
+ * AUTO-CLOCK CONFIGURATION
+ * BASE_TICK_MS: real milliseconds per 1 simulated minute at 1× speed.
+ * Speed multiplier shrinks this interval.
+ */
+const BASE_TICK_MS = 2000; // 2 real seconds = 1 sim minute at 1×
+
+/* ===== AUTO-CLOCK STATE — single source of truth in JS ===== */
+let clockRunning  = true;   // is the auto-clock active?
+let clockSpeedMul = 1;      // 1 / 2 / 5 / 10
+let clockInterval = null;   // the setInterval handle — only ONE ever runs
+
+/* Start (or restart) the auto-clock interval */
+function startClockInterval() {
+  if (clockInterval !== null) {
+    clearInterval(clockInterval);
+    clockInterval = null;
+  }
+  if (!clockRunning) return;
+  const ms = Math.round(BASE_TICK_MS / clockSpeedMul);
+  clockInterval = setInterval(autoTick, ms);
+}
+
+/* Called every N ms: advance C clock by 1 minute, refresh UI */
+async function autoTick() {
+  // Skip if a manual action is in flight (avoids pile-up)
+  if (loadingCount > 0) return;
+  try {
+    const data = await api({ action: 'advance', minutes: 1 });
+    if (data.ok === 1) {
+      handlePromotions(data.promotions);
+      updateUI(data);
+    }
+  } catch (_) {
+    // Silently ignore tick errors (server-banner already handles connectivity)
+  }
+}
+
+function toggleClock() {
+  clockRunning = !clockRunning;
+  const btn = document.getElementById('btn-clock-toggle');
+  if (clockRunning) {
+    btn.textContent = '⏸ Pause';
+    btn.classList.remove('paused');
+    btn.setAttribute('aria-label', 'Pause auto clock');
+    startClockInterval();
+    logActivity('Clock resumed', true);
+  } else {
+    btn.textContent = '▶ Resume';
+    btn.classList.add('paused');
+    btn.setAttribute('aria-label', 'Resume auto clock');
+    clearInterval(clockInterval);
+    clockInterval = null;
+    logActivity('Clock paused', true);
+  }
+  updateClockLabel(state ? state.clock : 0);
+}
+
+function setClockSpeed(val) {
+  clockSpeedMul = parseInt(val, 10) || 1;
+  if (clockRunning) startClockInterval(); // restart with new interval
+}
+
+/* ===== STATE ===== */
+let state = null;
+let selectedSev = 0;
+let currentView = 'columns';
+let currentTab = 'stats';
+let sortCol = 'position';
+let sortDir = 1;
+let activityLog = [];
+let newPatientIds = new Set();
+let pendingConfirm = null;
+let autoIdCounter = 1001;
+let searchQuery = '';
+/** In-treatment state: array of patient snapshot objects */
+let inTreatment = [];
+/** Set of IDs that were just promoted (for card highlight) */
+let recentlyPromotedIds = new Set();
+
+/* ===== THEME ===== */
+function initTheme() {
+  const saved = localStorage.getItem('er-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+  document.getElementById('btn-theme').textContent = saved === 'dark' ? '☀️ Light' : '🌙 Dark';
+}
+function toggleTheme() {
+  const curr = document.documentElement.getAttribute('data-theme');
+  const next = curr === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('er-theme', next);
+  document.getElementById('btn-theme').textContent = next === 'dark' ? '☀️ Light' : '🌙 Dark';
+}
+
+/* ===== SAFE DOM TEXT ===== */
+function esc(text) {
+  const d = document.createElement('div');
+  d.textContent = String(text);
+  return d.innerHTML;
+}
+function setText(el, text) {
+  if (typeof el === 'string') el = document.getElementById(el);
+  if (el) el.textContent = text;
+}
+
+/* ===== TOAST ===== */
+function toast(msg, type = 'info', duration = 3500) {
+  const icons = { success: '✓', error: '✗', warn: '⚠', info: 'ℹ' };
+  const container = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.setAttribute('role', 'status');
+  t.setAttribute('aria-live', 'polite');
+  const icon = document.createElement('span');
+  icon.textContent = icons[type] || 'ℹ';
+  const msg_el = document.createElement('span');
+  msg_el.textContent = msg;
+  t.appendChild(icon);
+  t.appendChild(msg_el);
+  container.appendChild(t);
+  setTimeout(() => {
+    t.classList.add('toast-out');
+    setTimeout(() => t.remove(), 300);
+  }, duration);
+}
+
+/* ===== LOADING ===== */
+let loadingCount = 0;
+function showLoading() {
+  loadingCount++;
+  document.getElementById('loading-overlay').classList.add('show');
+}
+function hideLoading() {
+  loadingCount = Math.max(0, loadingCount - 1);
+  if (loadingCount === 0) document.getElementById('loading-overlay').classList.remove('show');
+}
+
+/* ===== API ===== */
+let serverReachable = true;
+async function api(body) {
+  showLoading();
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!serverReachable) {
+      serverReachable = true;
+      document.getElementById('server-banner').classList.add('hidden');
+    }
+    return data;
+  } catch (e) {
+    serverReachable = false;
+    document.getElementById('server-banner').classList.remove('hidden');
+    throw e;
+  } finally {
+    hideLoading();
+  }
+}
+
+async function retryConnection() {
+  try {
+    const data = await api({ action: 'STATE' });
+    updateUI(data);
+    toast('Connection restored!', 'success');
+  } catch (_) {}
+}
+
+/* ===== LOG ACTIVITY ===== */
+function logActivity(msg, ok, cssClass) {
+  const now = new Date();
+  const ts = now.toLocaleTimeString('en-US', { hour12: false });
+  activityLog.unshift({ ts, msg, ok, cssClass: cssClass || (ok ? 'act-ok' : 'act-err') });
+  if (activityLog.length > 200) activityLog.length = 200;
+  if (currentTab === 'log') renderLog();
+}
+
+/* ===== HANDLE PROMOTIONS from C response ===== */
+function handlePromotions(promotions) {
+  if (!promotions || promotions.length === 0) return;
+  recentlyPromotedIds = new Set(promotions.map(pr => pr.id));
+  promotions.forEach(pr => {
+    const msg = `Patient #${pr.id} promoted from Level ${pr.from} to Level ${pr.to} at clock ${pr.clock}`;
+    logActivity(`⬆ ${msg}`, true, 'act-promo');
+    // Show a brief toast only for manual actions (not every auto-tick to avoid spam)
+    // We gate on: only if clock speed <= 2 or if it's a manual trigger
+    if (clockSpeedMul <= 2) {
+      toast(msg, 'warn', 4000);
+    }
+  });
+}
+
+/* ===== UPDATE UI FROM STATE ===== */
+function updateUI(data, animateIds) {
+  if (!data) return;
+  if (!data.clock && data.clock !== 0) return;
+  state = data;
+  updateClockLabel(data.clock);
+  updateNextBanner(data.next, data.stats);
+  updateQueues(data.queues, data.clock, animateIds);
+  updateList(data.queues, data.clock);
+  updateStats(data.stats);
+  updateHistory(data.history);
+  updateButtonStates(data.next, data.history);
+  // Clear promoted set after rendering
+  recentlyPromotedIds = new Set();
+}
+
+/* ===== CLOCK DISPLAY ===== */
+function updateClockLabel(clockMin) {
+  const h = Math.floor(clockMin / 60);
+  const m = clockMin % 60;
+  let label = `⏱ Clock: ${clockMin} min`;
+  if (h > 0) label += ` (${h}h ${m}m)`;
+  label += clockRunning ? ' ▶' : ' ⏸';
+  setText('clock-display', label);
+}
+
+/* Keep the old name for backward compat */
+function updateClock(clockMin) { updateClockLabel(clockMin); }
+
+/* ===== NEXT BANNER ===== */
+function updateNextBanner(next, stats) {
+  const el = document.getElementById('next-patient');
+  if (!next) {
+    el.textContent = 'No patients waiting';
+  } else {
+    el.innerHTML = '';
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = `${next.name} (ID ${next.id}) — Age ${next.age}`;
+    el.appendChild(nameSpan);
+    const badge = document.createElement('span');
+    badge.className = `lvl-badge lvl-${next.level}`;
+    badge.textContent = `L${next.level} ${LEVEL_NAMES[next.level]}`;
+    el.appendChild(badge);
+    const wait = document.createElement('span');
+    wait.style.cssText = 'font-size:0.8rem;color:var(--text3);margin-left:0.5rem;';
+    wait.textContent = ` • Waiting: ${next.wait} min`;
+    el.appendChild(wait);
+  }
+}
+
+/* ===== QUEUES ===== */
+const AGING_THRESHOLD_AT = [0, 0, 60, 90, 120];
+function agingProgress(p, clock) {
+  const lvl = p.level;
+  const threshold = AGING_THRESHOLD_AT[lvl - 1];
+  if (threshold === 0) return null;
+  const waited = p.levelWait !== undefined ? p.levelWait : (clock - (p.level_entry_time || 0));
+  return Math.min(100, Math.round((waited / threshold) * 100));
+}
+
+function buildPatientCard(p, clock, isNew) {
+  const card = document.createElement('div');
+  card.className = 'patient-card';
+  card.setAttribute('role', 'listitem');
+  card.setAttribute('data-id', p.id);
+  if (isNew) card.classList.add('admit-anim');
+  else if (recentlyPromotedIds.has(p.id)) card.classList.add('promoted-anim');
+  else if (p.aged) card.classList.add('aged-anim');
+
+  // ID
+  const idEl = document.createElement('div');
+  idEl.className = 'pc-id';
+  idEl.textContent = `ID: ${p.id} • Pos: ${p.position}`;
+  card.appendChild(idEl);
+
+  // Name
+  const nameEl = document.createElement('div');
+  nameEl.className = 'pc-name';
+  nameEl.textContent = p.name;
+  card.appendChild(nameEl);
+
+  // Meta
+  const metaEl = document.createElement('div');
+  metaEl.className = 'pc-meta';
+  const ageSpan = document.createElement('span');
+  ageSpan.textContent = `Age ${p.age}`;
+  metaEl.appendChild(ageSpan);
+  if (p.aged) {
+    const agedBadge = document.createElement('span');
+    agedBadge.className = 'aged-badge';
+    agedBadge.textContent = `↑ aged from L${p.orig}`;
+    metaEl.appendChild(agedBadge);
+  }
+  card.appendChild(metaEl);
+
+  // Live wait time — prominent line
+  const waitEl = document.createElement('div');
+  waitEl.className = 'pc-wait';
+  waitEl.textContent = `⏱ Waiting: ${p.wait} min`;
+  card.appendChild(waitEl);
+
+  // Aging progress bar
+  const prog = agingProgress(p, clock);
+  if (prog !== null) {
+    const barWrap = document.createElement('div');
+    barWrap.className = 'aging-bar-wrap';
+    const barLabel = document.createElement('div');
+    barLabel.className = 'aging-bar-label';
+    const labelLeft = document.createElement('span');
+    labelLeft.textContent = 'Aging';
+    const labelRight = document.createElement('span');
+    labelRight.textContent = `${prog}%`;
+    barLabel.appendChild(labelLeft);
+    barLabel.appendChild(labelRight);
+    const bar = document.createElement('div');
+    bar.className = 'aging-bar';
+    const fill = document.createElement('div');
+    const fillClass = prog < 50 ? 'aging-fill-low' : prog < 75 ? 'aging-fill-med' : prog < 90 ? 'aging-fill-high' : 'aging-fill-crit';
+    fill.className = `aging-bar-fill ${fillClass}`;
+    fill.style.width = `${prog}%`;
+    fill.setAttribute('role', 'progressbar');
+    fill.setAttribute('aria-valuenow', prog);
+    fill.setAttribute('aria-valuemin', 0);
+    fill.setAttribute('aria-valuemax', 100);
+    fill.setAttribute('aria-label', `Aging progress: ${prog}%`);
+    bar.appendChild(fill);
+    barWrap.appendChild(barLabel);
+    barWrap.appendChild(bar);
+    card.appendChild(barWrap);
+  }
+
+  // Actions
+  const actions = document.createElement('div');
+  actions.className = 'pc-actions';
+
+  // Retriage
+  const rtWrap = document.createElement('div');
+  rtWrap.className = 'retriage-picker';
+  for (let lv = 1; lv <= 5; lv++) {
+    if (lv === p.level) continue;
+    const btn = document.createElement('button');
+    btn.className = `rt-btn rt-${lv}`;
+    btn.textContent = `L${lv}`;
+    btn.setAttribute('aria-label', `Retriage to Level ${lv} ${LEVEL_NAMES[lv]}`);
+    btn.title = `Retriage to Level ${lv}: ${LEVEL_NAMES[lv]}`;
+    const pid = p.id, plv = lv;
+    btn.onclick = (e) => { e.stopPropagation(); retriagePatient(pid, plv); };
+    rtWrap.appendChild(btn);
+  }
+  actions.appendChild(rtWrap);
+
+  const discBtn = document.createElement('button');
+  discBtn.className = 'btn-sm danger';
+  discBtn.textContent = '✕ Discharge';
+  discBtn.setAttribute('aria-label', `Discharge patient ${p.name} (ID ${p.id})`);
+  const pid = p.id, pname = p.name;
+  discBtn.onclick = (e) => { e.stopPropagation(); confirmDischarge(pid, pname); };
+  actions.appendChild(discBtn);
+
+  card.appendChild(actions);
+  return card;
+}
+
+function updateQueues(queues, clock, animateIds) {
+  for (let lvl = 0; lvl < 5; lvl++) {
+    const container = document.getElementById(`q-${lvl + 1}`);
+    const cntEl = document.getElementById(`cnt-${lvl + 1}`);
+    const patients = queues[lvl] || [];
+    cntEl.textContent = patients.length;
+    container.innerHTML = '';
+    if (patients.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-msg';
+      const icon = document.createElement('div');
+      icon.className = 'empty-icon';
+      icon.textContent = ['🆓', '🟠', '🟡', '🟢', '🔵'][lvl];
+      const msg = document.createElement('div');
+      msg.textContent = 'Queue empty';
+      empty.appendChild(icon);
+      empty.appendChild(msg);
+      container.appendChild(empty);
+    } else {
+      patients.forEach(p => {
+        const isNew = animateIds && animateIds.has(p.id);
+        const card = buildPatientCard(p, clock, isNew);
+        container.appendChild(card);
+      });
+    }
+  }
+}
+
+/* ===== LIST VIEW ===== */
+let flatPatients = [];
+function updateList(queues, clock) {
+  flatPatients = [];
+  queues.forEach(lvlQueue => {
+    lvlQueue.forEach(p => flatPatients.push(p));
+  });
+  if (currentView === 'list') renderTable();
+}
+
+function renderTable() {
+  const tbody = document.getElementById('list-tbody');
+  const emptyDiv = document.getElementById('list-empty');
+  const q = searchQuery.toLowerCase();
+  let filtered = flatPatients.filter(p =>
+    !q || String(p.id).includes(q) || p.name.toLowerCase().includes(q)
+  );
+  // Sort
+  filtered.sort((a, b) => {
+    let va = a[sortCol], vb = b[sortCol];
+    if (sortCol === 'name') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+    return (va < vb ? -1 : va > vb ? 1 : 0) * sortDir;
+  });
+  // Update sort arrows
+  document.querySelectorAll('th').forEach(th => {
+    const icon = th.querySelector('.sort-icon');
+    if (icon) icon.textContent = '';
+    th.setAttribute('aria-sort', 'none');
+  });
+  const colMap = { position: 0, id: 1, name: 2, age: 3, level: 4, orig: 5, wait: 6 };
+  if (colMap[sortCol] !== undefined) {
+    const headers = document.querySelectorAll('th');
+    const th = headers[colMap[sortCol]];
+    if (th) {
+      const icon = th.querySelector('.sort-icon');
+      if (icon) icon.textContent = sortDir === 1 ? '▲' : '▼';
+      th.setAttribute('aria-sort', sortDir === 1 ? 'ascending' : 'descending');
+    }
+  }
+
+  tbody.innerHTML = '';
+  if (filtered.length === 0) {
+    emptyDiv.style.display = 'block';
+    return;
+  }
+  emptyDiv.style.display = 'none';
+  filtered.forEach(p => {
+    const tr = document.createElement('tr');
+    const fields = [
+      p.position,
+      p.id,
+      p.name,
+      p.age,
+      '',
+      '',
+      p.wait,
+      p.aged ? `↑ from L${p.orig}` : '—'
+    ];
+    fields.forEach((v, i) => {
+      const td = document.createElement('td');
+      if (i === 2 || i === 7) {
+        td.textContent = v;
+      } else if (i === 4) {
+        const badge = document.createElement('span');
+        badge.className = `lvl-badge lvl-${p.level}`;
+        badge.textContent = `L${p.level} ${LEVEL_NAMES[p.level]}`;
+        td.appendChild(badge);
+      } else if (i === 5) {
+        const badge = document.createElement('span');
+        badge.className = `lvl-badge lvl-${p.orig}`;
+        badge.textContent = `L${p.orig} ${LEVEL_NAMES[p.orig]}`;
+        td.appendChild(badge);
+      } else {
+        td.textContent = v;
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function sortTable(col) {
+  if (sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = 1; }
+  renderTable();
+}
+function filterTable() {
+  searchQuery = document.getElementById('search-input').value;
+  renderTable();
+}
+
+/* ===== STATS ===== */
+function updateStats(stats) {
+  if (!stats) return;
+  setText('stat-waiting', stats.totalWaiting);
+  setText('stat-treated', stats.totalTreated);
+  setText('stat-avg-wait', `${stats.avgWait.toFixed(1)} min`);
+  setText('stat-avg-treat', `${stats.avgWaitTreated.toFixed(1)} min`);
+  setText('stat-max-wait', `${stats.maxWait} min`);
+  const maxNameEl = document.getElementById('stat-max-name');
+  if (stats.maxWaitId > 0) {
+    maxNameEl.textContent = `Patient: ${stats.maxWaitName} (ID ${stats.maxWaitId})`;
+  } else {
+    maxNameEl.textContent = '';
+  }
+  // Bar chart
+  const chart = document.getElementById('bar-chart');
+  chart.innerHTML = '';
+  const maxCount = Math.max(1, ...stats.countPerLevel);
+  const lvlColors = ['', '#c0392b', '#e67e22', '#d4ac0d', '#27ae60', '#2980b9'];
+  stats.countPerLevel.forEach((count, i) => {
+    const lvl = i + 1;
+    const row = document.createElement('div');
+    row.className = 'bc-row';
+    const label = document.createElement('div');
+    label.className = 'bc-label';
+    label.textContent = `L${lvl} ${LEVEL_NAMES[lvl]}`;
+    const barWrap = document.createElement('div');
+    barWrap.className = 'bc-bar-wrap';
+    const bar = document.createElement('div');
+    bar.className = 'bc-bar';
+    bar.style.background = lvlColors[lvl];
+    const pct = Math.round((count / maxCount) * 100);
+    bar.style.width = `${pct}%`;
+    bar.setAttribute('role', 'img');
+    bar.setAttribute('aria-label', `Level ${lvl}: ${count} patients`);
+    if (count > 0) bar.textContent = count;
+    const countDiv = document.createElement('div');
+    countDiv.className = 'bc-count';
+    countDiv.textContent = count;
+    barWrap.appendChild(bar);
+    row.appendChild(label);
+    row.appendChild(barWrap);
+    row.appendChild(countDiv);
+    chart.appendChild(row);
+  });
+}
+
+/* ===== HISTORY ===== */
+function updateHistory(history) {
+  const list = document.getElementById('history-list');
+  const empty = document.getElementById('hist-empty');
+  list.innerHTML = '';
+  if (!history || history.length === 0) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  history.forEach(p => {
+    const li = document.createElement('li');
+    li.className = 'history-item';
+    const icon = document.createElement('div');
+    icon.className = 'hist-icon hist-treated';
+    icon.textContent = '✓';
+    const info = document.createElement('div');
+    info.className = 'hist-info';
+    const name = document.createElement('div');
+    name.className = 'hist-name';
+    name.textContent = `${p.name} (ID ${p.id})`;
+    const meta = document.createElement('div');
+    meta.className = 'hist-meta';
+    // p.wait is now frozen at treatment_start_time - arrival_time (set by C side)
+    meta.textContent = `Age ${p.age} • Treated at L${p.level} (${LEVEL_NAMES[p.level]})`;
+    if (p.aged) meta.textContent += ` • Aged from L${p.orig}`;
+    meta.textContent += ` • Wait: ${p.wait} min`;
+    info.appendChild(name);
+    info.appendChild(meta);
+    li.appendChild(icon);
+    li.appendChild(info);
+    list.appendChild(li);
+  });
+}
+
+/* ===== BUTTON STATES ===== */
+function updateButtonStates(next, history) {
+  document.getElementById('btn-treat').disabled = !next;
+  document.getElementById('btn-undo').disabled = !history || history.length === 0;
+}
+
+/* ===== ACTIVITY LOG ===== */
+function renderLog() {
+  const list = document.getElementById('activity-list');
+  const empty = document.getElementById('log-empty');
+  list.innerHTML = '';
+  if (activityLog.length === 0) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  activityLog.forEach(entry => {
+    const li = document.createElement('li');
+    li.className = 'activity-item';
+    const ts = document.createElement('span');
+    ts.className = 'act-time';
+    ts.textContent = entry.ts;
+    const msg = document.createElement('span');
+    msg.className = entry.cssClass || (entry.ok ? 'act-ok' : 'act-err');
+    msg.textContent = entry.msg;
+    li.appendChild(ts);
+    li.appendChild(msg);
+    list.appendChild(li);
+  });
+}
+
+/* ===== SEVERITY SELECT ===== */
+function selectSev(level) {
+  selectedSev = level;
+  document.querySelectorAll('.sev-btn').forEach(b => {
+    const active = parseInt(b.dataset.level) === level;
+    b.classList.toggle('active', active);
+    b.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+  document.getElementById('sev-err').textContent = '';
+}
+
+/* ===== GENERATE ID ===== */
+function generateId() {
+  let maxId = autoIdCounter;
+  if (state) {
+    state.queues.forEach(q => q.forEach(p => { if (p.id >= maxId) maxId = p.id + 1; }));
+    if (state.history) state.history.forEach(p => { if (p.id >= maxId) maxId = p.id + 1; });
+  }
+  autoIdCounter = maxId;
+  document.getElementById('admit-id').value = autoIdCounter;
+  autoIdCounter++;
+}
+
+/* ===== VALIDATION ===== */
+function validateAdmit() {
+  let valid = true;
+  const id = parseInt(document.getElementById('admit-id').value);
+  const name = document.getElementById('admit-name').value.trim();
+  const age = parseInt(document.getElementById('admit-age').value);
+
+  document.getElementById('id-err').textContent = '';
+  document.getElementById('name-err').textContent = '';
+  document.getElementById('age-err').textContent = '';
+  document.getElementById('sev-err').textContent = '';
+  document.getElementById('admit-id').classList.remove('error');
+  document.getElementById('admit-name').classList.remove('error');
+  document.getElementById('admit-age').classList.remove('error');
+
+  if (!id || id <= 0 || !Number.isInteger(id)) {
+    document.getElementById('id-err').textContent = 'ID must be a positive integer';
+    document.getElementById('admit-id').classList.add('error');
+    valid = false;
+  }
+  if (!name || !/^[A-Za-z ]{1,40}$/.test(name)) {
+    document.getElementById('name-err').textContent = 'Name: 1–40 letters and spaces only';
+    document.getElementById('admit-name').classList.add('error');
+    valid = false;
+  }
+  if (isNaN(age) || age < 0 || age > 120) {
+    document.getElementById('age-err').textContent = 'Age must be 0–120';
+    document.getElementById('admit-age').classList.add('error');
+    valid = false;
+  }
+  if (!selectedSev) {
+    document.getElementById('sev-err').textContent = 'Please select a severity level';
+    valid = false;
+  }
+  return valid;
+}
+
+/* ===== IN-TREATMENT PANEL ===== */
+function renderInTreatment() {
+  const panel = document.getElementById('in-treatment-panel');
+  const container = document.getElementById('in-treatment-cards');
+  const countEl = document.getElementById('in-treatment-count');
+
+  container.innerHTML = '';
+  countEl.textContent = inTreatment.length;
+
+  if (inTreatment.length === 0) {
+    panel.classList.add('hidden');
+    return;
+  }
+  panel.classList.remove('hidden');
+
+  inTreatment.forEach((p, idx) => {
+    const card = document.createElement('div');
+    card.className = 'in-treat-card';
+    card.setAttribute('role', 'listitem');
+    card.setAttribute('data-treat-idx', idx);
+
+    const idEl = document.createElement('div');
+    idEl.className = 'itc-id';
+    idEl.textContent = `ID: ${p.id}`;
+    card.appendChild(idEl);
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'itc-name';
+    nameEl.textContent = p.name;
+    card.appendChild(nameEl);
+
+    const metaEl = document.createElement('div');
+    metaEl.className = 'itc-meta';
+    // p.wait is the frozen wait at time of treatment
+    metaEl.textContent = `Age ${p.age} • L${p.level} ${LEVEL_NAMES[p.level]}${p.aged ? ` • Aged from L${p.orig}` : ''} • Wait: ${p.wait} min`;
+    card.appendChild(metaEl);
+
+    const statusEl = document.createElement('div');
+    statusEl.className = 'itc-status';
+    statusEl.innerHTML = '⏳ Treatment in progress…';
+    card.appendChild(statusEl);
+
+    const discBtn = document.createElement('button');
+    discBtn.className = 'btn-discharge-complete';
+    discBtn.textContent = '✓ Complete / Discharge';
+    discBtn.setAttribute('aria-label', `Complete treatment and discharge ${p.name}`);
+    discBtn.onclick = () => dischargeFromTreatment(idx);
+    card.appendChild(discBtn);
+
+    container.appendChild(card);
+  });
+}
+
+function dischargeFromTreatment(idx) {
+  const p = inTreatment[idx];
+  if (!p) return;
+  inTreatment.splice(idx, 1);
+  renderInTreatment();
+  toast(`${p.name} discharged from treatment`, 'success');
+  logActivity(`DISCHARGE (complete): ${p.name} (ID ${p.id})`, true);
+}
+
+/* ===== ACTIONS ===== */
+async function admitPatient() {
+  if (!validateAdmit()) return;
+  const id = parseInt(document.getElementById('admit-id').value);
+  const name = document.getElementById('admit-name').value.trim();
+  const age = parseInt(document.getElementById('admit-age').value);
+  const severity = selectedSev;
+  try {
+    const data = await api({ action: 'admit', id, name, age, severity });
+    const ok = data.ok === 1;
+    toast(data.msg, ok ? 'success' : 'error');
+    logActivity(`ADMIT: ${data.msg}`, ok);
+    if (ok) {
+      const animIds = new Set([id]);
+      handlePromotions(data.promotions);
+      updateUI(data, animIds);
+      document.getElementById('admit-id').value = '';
+      document.getElementById('admit-name').value = '';
+      document.getElementById('admit-age').value = '';
+      selectedSev = 0;
+      document.querySelectorAll('.sev-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
+    } else {
+      handlePromotions(data.promotions);
+      updateUI(data);
+    }
+  } catch (e) {
+    toast('Request failed: cannot reach server', 'error');
+    logActivity('ADMIT: network error', false);
+  }
+}
+
+async function treatNext() {
+  const patientBeingTreated = state && state.next ? { ...state.next } : null;
+  try {
+    const data = await api({ action: 'treat' });
+    const ok = data.ok === 1;
+    toast(data.msg, ok ? 'success' : 'error');
+    logActivity(`TREAT: ${data.msg}`, ok);
+    if (ok && patientBeingTreated) {
+      inTreatment.push(patientBeingTreated);
+      renderInTreatment();
+    }
+    handlePromotions(data.promotions);
+    updateUI(data);
+  } catch (e) {
+    toast('Request failed', 'error');
+    logActivity('TREAT: network error', false);
+  }
+}
+
+async function undoLast() {
+  try {
+    const data = await api({ action: 'undo' });
+    const ok = data.ok === 1;
+    toast(data.msg, ok ? 'success' : 'warn');
+    logActivity(`UNDO: ${data.msg}`, ok);
+    if (ok && inTreatment.length > 0) {
+      inTreatment.pop();
+      renderInTreatment();
+    }
+    handlePromotions(data.promotions);
+    updateUI(data);
+  } catch (e) {
+    toast('Request failed', 'error');
+    logActivity('UNDO: network error', false);
+  }
+}
+
+async function advanceTime(minutes) {
+  try {
+    const data = await api({ action: 'advance', minutes });
+    const ok = data.ok === 1;
+    if (ok) {
+      toast(data.msg, 'success');
+      logActivity(`ADVANCE +${minutes}min: ${data.msg}`, ok);
+    } else {
+      toast(data.msg, 'warn');
+      logActivity(`ADVANCE +${minutes}min: ${data.msg}`, ok);
+    }
+    handlePromotions(data.promotions);
+    updateUI(data);
+  } catch (e) {
+    toast('Request failed', 'error');
+    logActivity('ADVANCE: network error', false);
+  }
+}
+
+function advanceCustom() {
+  const val = parseInt(document.getElementById('custom-advance').value);
+  if (!val || val < 1 || val > 1000) {
+    toast('Enter 1–1000 minutes', 'warn');
+    return;
+  }
+  advanceTime(val);
+  document.getElementById('custom-advance').value = '';
+}
+
+async function retriagePatient(id, newSeverity) {
+  try {
+    const data = await api({ action: 'retriage', id, newSeverity });
+    const ok = data.ok === 1;
+    toast(data.msg, ok ? 'success' : 'error');
+    logActivity(`RETRIAGE ID ${id} → L${newSeverity}: ${data.msg}`, ok);
+    handlePromotions(data.promotions);
+    updateUI(data);
+  } catch (e) {
+    toast('Request failed', 'error');
+    logActivity('RETRIAGE: network error', false);
+  }
+}
+
+async function dischargePatient(id) {
+  try {
+    const data = await api({ action: 'discharge', id });
+    const ok = data.ok === 1;
+    toast(data.msg, ok ? 'success' : 'error');
+    logActivity(`DISCHARGE ID ${id}: ${data.msg}`, ok);
+    handlePromotions(data.promotions);
+    updateUI(data);
+  } catch (e) {
+    toast('Request failed', 'error');
+    logActivity('DISCHARGE: network error', false);
+  }
+}
+
+async function searchPatient() {
+  const id = parseInt(document.getElementById('search-id-input').value);
+  if (!id || id <= 0) { toast('Enter a valid patient ID', 'warn'); return; }
+  const resultEl = document.getElementById('search-result');
+  resultEl.textContent = 'Searching…';
+  try {
+    const data = await api({ action: 'search', id });
+    const ok = data.ok === 1;
+    resultEl.style.color = ok ? 'var(--success)' : 'var(--error)';
+    resultEl.textContent = data.msg;
+    logActivity(`SEARCH ID ${id}: ${data.msg}`, ok);
+    handlePromotions(data.promotions);
+    updateUI(data);
+  } catch (e) {
+    resultEl.textContent = 'Network error';
+    resultEl.style.color = 'var(--error)';
+  }
+}
+
+/* ===== CONFIRM / RESET / DISCHARGE ===== */
+function confirmDischarge(id, name) {
+  showConfirm(`Discharge ${name} (ID ${id})? They will be removed from the queue.`, () => dischargePatient(id));
+}
+function confirmReset() {
+  showConfirm('Reset the entire ER system? All patients and history will be cleared.', doReset);
+}
+async function doReset() {
+  try {
+    const data = await api({ action: 'reset' });
+    toast(data.msg, 'success');
+    activityLog = [];
+    inTreatment = [];
+    renderInTreatment();
+    logActivity('RESET: System reset', true);
+    updateUI(data);
+  } catch (e) {
+    toast('Reset failed', 'error');
+  }
+}
+
+function showConfirm(msg, onOk) {
+  document.getElementById('confirm-msg').textContent = msg;
+  pendingConfirm = onOk;
+  document.getElementById('confirm-overlay').classList.add('show');
+}
+function confirmOk() {
+  confirmClose();
+  if (pendingConfirm) { pendingConfirm(); pendingConfirm = null; }
+}
+function confirmClose() {
+  document.getElementById('confirm-overlay').classList.remove('show');
+}
+
+/* ===== SIMULATION ===== */
+async function runSimulation() {
+  const count = parseInt(document.getElementById('sim-count').value);
+  const seedVal = document.getElementById('sim-seed').value;
+  const seed = seedVal !== '' ? parseInt(seedVal) : 42;
+  if (!count || count < 1 || count > 50) { toast('Count: 1–50', 'warn'); return; }
+  if (isNaN(seed) || seed < 0) { toast('Seed must be ≥ 0', 'warn'); return; }
+  try {
+    const data = await api({ action: 'simulate', count, seed });
+    const ok = data.ok === 1;
+    toast(data.msg, ok ? 'success' : 'error');
+    logActivity(`SIMULATE ${count} pts seed ${seed}: ${data.msg}`, ok);
+    handlePromotions(data.promotions);
+    updateUI(data);
+  } catch (e) {
+    toast('Simulation failed', 'error');
+  }
+}
+
+async function loadDemoData() {
+  const demoPatients = [
+    { id: 101, name: 'Alice Johnson', age: 45, severity: 1 },
+    { id: 102, name: 'Bob Smith', age: 67, severity: 2 },
+    { id: 103, name: 'Carol White', age: 28, severity: 3 },
+    { id: 104, name: 'Dan Brown', age: 52, severity: 4 },
+    { id: 105, name: 'Eve Davis', age: 19, severity: 5 },
+    { id: 106, name: 'Frank Lee', age: 74, severity: 2 },
+    { id: 107, name: 'Grace King', age: 33, severity: 3 },
+    { id: 108, name: 'Hank Moore', age: 41, severity: 5 },
+  ];
+  let admitted = 0, skipped = 0;
+  for (const p of demoPatients) {
+    try {
+      const data = await api({ action: 'admit', ...p });
+      if (data.ok === 1) admitted++;
+      else skipped++;
+      handlePromotions(data.promotions);
+      updateUI(data);
+    } catch (_) { skipped++; }
+  }
+  toast(`Demo loaded: ${admitted} admitted, ${skipped} skipped`, 'success');
+  logActivity(`DEMO LOAD: ${admitted} admitted, ${skipped} skipped`, true);
+}
+
+/* ===== CSV IMPORT ===== */
+function toggleCsvImport() {
+  document.getElementById('csv-import-area').classList.toggle('show');
+}
+function loadCSVFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => { document.getElementById('csv-textarea').value = ev.target.result; };
+  reader.readAsText(file);
+}
+async function importCSV() {
+  const raw = document.getElementById('csv-textarea').value.trim();
+  if (!raw) { toast('No CSV data entered', 'warn'); return; }
+  const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  let loaded = 0, skipped = 0;
+  const skippedReasons = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const parts = line.split(',').map(p => p.trim());
+    if (i === 0 && (isNaN(parts[0]) || parts[0].toLowerCase() === 'id')) {
+      skippedReasons.push(`Row ${i + 1}: header row skipped`);
+      skipped++;
+      continue;
+    }
+    if (parts.length < 4) {
+      skippedReasons.push(`Row ${i + 1}: too few columns (need id,name,age,severity)`);
+      skipped++;
+      continue;
+    }
+    const id = parseInt(parts[0]);
+    const name = parts[1];
+    const age = parseInt(parts[2]);
+    const severity = parseInt(parts[3]);
+    if (!id || id <= 0) {
+      skippedReasons.push(`Row ${i + 1}: invalid ID "${parts[0]}"`);
+      skipped++; continue;
+    }
+    if (!/^[A-Za-z ]{1,40}$/.test(name)) {
+      skippedReasons.push(`Row ${i + 1}: invalid name "${name}" (letters/spaces only, max 40)`);
+      skipped++; continue;
+    }
+    if (isNaN(age) || age < 0 || age > 120) {
+      skippedReasons.push(`Row ${i + 1}: invalid age "${parts[2]}" (must be 0–120)`);
+      skipped++; continue;
+    }
+    if (isNaN(severity) || severity < 1 || severity > 5) {
+      skippedReasons.push(`Row ${i + 1}: invalid severity "${parts[3]}" (must be 1–5)`);
+      skipped++; continue;
+    }
+    try {
+      const data = await api({ action: 'admit', id, name, age, severity });
+      if (data.ok === 1) { loaded++; handlePromotions(data.promotions); updateUI(data); }
+      else { skipped++; skippedReasons.push(`Row ${i + 1}: ${data.msg}`); }
+    } catch (_) {
+      skipped++;
+      skippedReasons.push(`Row ${i + 1}: network error`);
+    }
+  }
+  const resultEl = document.getElementById('csv-result');
+  resultEl.innerHTML = '';
+  const summary = document.createElement('div');
+  summary.style.fontWeight = '600';
+  summary.style.color = loaded > 0 ? 'var(--success)' : 'var(--error)';
+  summary.textContent = `✓ ${loaded} loaded, ✗ ${skipped} skipped`;
+  resultEl.appendChild(summary);
+  if (skippedReasons.length > 0) {
+    const ul = document.createElement('ul');
+    ul.style.cssText = 'margin:0.3rem 0 0 1rem;font-size:0.75rem;color:var(--text3);';
+    skippedReasons.forEach(r => {
+      const li = document.createElement('li');
+      li.textContent = r;
+      ul.appendChild(li);
+    });
+    resultEl.appendChild(ul);
+  }
+  logActivity(`CSV IMPORT: ${loaded} loaded, ${skipped} skipped`, loaded > 0);
+  toast(`CSV: ${loaded} loaded, ${skipped} skipped`, loaded > 0 ? 'success' : 'warn');
+}
+
+/* ===== CSV EXPORT ===== */
+function exportCSV() {
+  if (!state || !state.queues) { toast('No data to export', 'warn'); return; }
+  let rows = ['id,name,age,current_level,original_level,wait_min'];
+  state.queues.forEach(lvl => {
+    lvl.forEach(p => {
+      const name = p.name.replace(/,/g, ' ');
+      rows.push(`${p.id},${name},${p.age},${p.level},${p.orig},${p.wait}`);
+    });
+  });
+  if (rows.length === 1) { toast('No patients to export', 'warn'); return; }
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `er_patients_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(`Exported ${rows.length - 1} patients`, 'success');
+  logActivity(`CSV EXPORT: ${rows.length - 1} patients`, true);
+}
+
+/* ===== VIEW / TAB SWITCHING ===== */
+function switchView(view) {
+  currentView = view;
+  const colView = document.getElementById('queues-view');
+  const listView = document.getElementById('list-view');
+  const btnCol = document.getElementById('btn-col-view');
+  const btnList = document.getElementById('btn-list-view');
+  if (view === 'columns') {
+    colView.classList.remove('hidden');
+    listView.classList.remove('active');
+    btnCol.classList.add('active');
+    btnList.classList.remove('active');
+    btnCol.setAttribute('aria-pressed', 'true');
+    btnList.setAttribute('aria-pressed', 'false');
+  } else {
+    colView.classList.add('hidden');
+    listView.classList.add('active');
+    btnCol.classList.remove('active');
+    btnList.classList.add('active');
+    btnCol.setAttribute('aria-pressed', 'false');
+    btnList.setAttribute('aria-pressed', 'true');
+    renderTable();
+  }
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.remove('active');
+    b.setAttribute('aria-selected', 'false');
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`tab-${tab}-btn`).classList.add('active');
+  document.getElementById(`tab-${tab}-btn`).setAttribute('aria-selected', 'true');
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  if (tab === 'log') renderLog();
+}
+
+/* ===== LEGEND ===== */
+function toggleLegend() {
+  const body = document.getElementById('legend-body');
+  const arrow = document.getElementById('legend-arrow');
+  const btn = document.getElementById('legend-toggle');
+  const open = body.classList.toggle('open');
+  arrow.textContent = open ? '▲' : '▼';
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+/* ===== HELP POPOVER ===== */
+function showHelp() {
+  document.getElementById('help-overlay').classList.add('show');
+  document.getElementById('help-close').focus();
+}
+function hideHelp(e) {
+  if (!e || e.target === document.getElementById('help-overlay')) {
+    document.getElementById('help-overlay').classList.remove('show');
+    document.getElementById('btn-help').focus();
+  }
+}
+
+/* ===== KEYBOARD SHORTCUTS ===== */
+document.addEventListener('keydown', e => {
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+  if (document.getElementById('help-overlay').classList.contains('show')) {
+    if (e.key === 'Escape') { hideHelp(); e.preventDefault(); }
+    return;
+  }
+  if (document.getElementById('confirm-overlay').classList.contains('show')) {
+    if (e.key === 'Escape') { confirmClose(); e.preventDefault(); }
+    return;
+  }
+  switch (e.key) {
+    case 't': case 'T':
+      e.preventDefault();
+      if (!document.getElementById('btn-treat').disabled) treatNext();
+      break;
+    case 'u': case 'U':
+      e.preventDefault();
+      if (!document.getElementById('btn-undo').disabled) undoLast();
+      break;
+    case 'a': case 'A':
+      e.preventDefault();
+      document.getElementById('admit-id').focus();
+      break;
+    case '/':
+      e.preventDefault();
+      if (currentView === 'list') {
+        document.getElementById('search-input').focus();
+      } else {
+        switchView('list');
+        setTimeout(() => document.getElementById('search-input').focus(), 50);
+      }
+      break;
+    case '?':
+      e.preventDefault();
+      showHelp();
+      break;
+    case ' ':
+      e.preventDefault();
+      toggleClock();
+      break;
+    case 'Escape':
+      break;
+  }
+});
+
+/* ===== INITIAL LOAD ===== */
+async function init() {
+  initTheme();
+  try {
+    const data = await api({ action: 'state' });
+    updateUI(data);
+    logActivity('Dashboard loaded', true);
+  } catch (e) {
+    toast('Cannot reach server. Is node server.js running?', 'error', 6000);
+    logActivity('INIT: server unreachable', false);
+  }
+  // Start auto-clock after initial load
+  startClockInterval();
+}
+
+init();
+</script>
+</body>
+</html>
